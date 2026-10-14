@@ -12,6 +12,7 @@
 | `-r`, `--rproc PATH\|NAME` | `/sys/class/remoteproc/remoteproc0` | 远端核的 sysfs 目录；只给名字时视为 `/sys/class/remoteproc/` 下的条目，如 `remoteproc1` |
 | `-D`, `--firmware-dir DIR` | `/lib/firmware` | 固件存放目录。内核默认只从 `/lib/firmware` 加载，改它时要同步设置 `/sys/module/firmware_class/parameters/path` |
 | `-f`, `--firmware NAME` | `arduino.elf` | 固件文件名，也是写进 remoteproc `firmware` 属性的名字；上一版备份为 `<name>_old.<ext>` |
+| `-v`, `--verbose` | | 记录每一帧和状态变化 |
 | `-h`, `--help` | | 帮助 |
 
 例如给第二个远端核烧 RT-Thread：
@@ -31,23 +32,40 @@ scp firmware.elf root@192.168.42.1:/tmp/ && ssh root@192.168.42.1 burnd load /tm
 burnd load /lib/firmware/arduino.elf        # 文件已在原位时只做重启
 ```
 
-[sdk/http](../sdk/http) 用它实现了一个 HTTP 接口。实现在 `src/loader.c`，和串口协议无关。
+[sdk/http](../sdk/http) 用它实现了一个 HTTP 接口。
 
-预编译的 `burnd` 随 Milk-V 的 Arduino 版 SD 卡镜像一起发布（见 [sdk/](../sdk/)），由镜像里的 `usb-rndis.sh` 在 USB 串口就绪后拉起。
+### 结构
+
+```
+src/main.c      参数、自动引导、进入服务循环或 load 模式
+src/service.c   串口服务：poll 循环 + 状态机（空闲 → 接收 → 校验尾帧）
+src/loader.c    remoteproc 操作：stop / start / 落盘 / 备份，与传输方式无关
+src/serial.c    打开 tty，raw 8N1 115200
+src/config.c    命令行参数与派生路径
+src/crc32.c     IEEE CRC-32，与 zlib 的 crc32() 相同
+src/log.c       stderr + syslog
+```
+
+单线程，没有第三方依赖，只用 libc。接收期间固件先写到 `<name>.tmp`，CRC32 校验通过后才备份旧版并原子改名，传一半掉电不会留下损坏的固件。日志默认只记错误，走 syslog（`logread`）和 stderr；`-v` 会记录每一帧。
 
 ### 构建
 
-静态链接，依赖的 libev 与 zlib 已按架构放在 `lib/` 下，只需要交叉编译器。Debian/Ubuntu：
+只需要交叉编译器。Debian/Ubuntu：
 
 ```bash
 sudo apt install gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
 
 make                   # riscv64：Duo / Duo256 / DuoS 的 Linux 侧
 make ARCH=aarch64      # aarch64：DuoS 跑 ARM 大核时
+make ARCH=native       # 本机，跑测试用
 ```
 
-也可以直接用仓库根目录的 `scripts/build-burnd.sh <version> [out-dir]` 两个架构一起出。
+静态链接，与镜像的 libc 版本无关。仓库根目录的 `scripts/build-burnd.sh <version> [out-dir]` 两个架构一起出。
 
-### 调试
+### 测试
 
-默认不打日志。加 `CFLAGS+=-DDEBUG` 编译后用 syslog 输出，板上 `logread -f` 查看。
+```bash
+make ARCH=native test
+```
+
+`tests/run.sh` 用 socat 建一对 pty、一个模拟内核行为的假 sysfs 目录，再用 `tests/client.py`（纯 Python，不依赖 pyserial）按协议跑：正常上传、尾帧紧贴数据、二次上传留备份、CRC 错误被拒且旧固件不受影响、STOP/START、未知命令、帧前杂音。需要 `socat` 和 `python3`。

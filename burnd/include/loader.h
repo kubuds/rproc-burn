@@ -5,7 +5,7 @@
  * Firmware installation and remote core control through the remoteproc
  * sysfs interface, independent of how the image reached the board.
  * Paths come from burnd_cfg. Functions return 0 on success and -1 on
- * failure after writing a one-line reason to stderr.
+ * failure after logging the reason.
  */
 
 /* Stop the remote core if it is running and wait until it is offline. */
@@ -13,6 +13,12 @@ extern int loader_stop(void);
 
 /* Point remoteproc at the configured firmware name and start the core. */
 extern int loader_start(void);
+
+/* Create the firmware directory if it does not exist. */
+extern int loader_prepare_dir(void);
+
+/* Move a fully received image at tmp into place, keeping the old one as backup. */
+extern int loader_commit(const char *tmp);
 
 /* Copy src into the firmware directory, keeping the previous image as backup. */
 extern int loader_install(const char *src);

@@ -22,6 +22,7 @@ static void usage(FILE *out, const char *prog)
             "  -D, --firmware-dir DIR   directory the kernel loads firmware from\n"
             "                           (default %s)\n"
             "  -f, --firmware NAME      firmware file name (default %s)\n"
+            "  -v, --verbose            log every frame and state change\n"
             "  -h, --help               show this help\n",
             prog, prog, BURND_DEFAULT_DEVICE, BURND_DEFAULT_RPROC,
             BURND_DEFAULT_FIRMWARE_DIR, BURND_DEFAULT_FIRMWARE);
@@ -79,6 +80,11 @@ static int derive_paths(struct burnd_config *c)
         return -1;
     if (join(c->backup_path, c->firmware_dir, backup) < 0)
         return -1;
+    if (snprintf(c->temp_path, BURND_PATH_MAX, "%s.tmp", c->firmware_path) >= BURND_PATH_MAX)
+    {
+        fprintf(stderr, "burnd: path too long: %s.tmp\n", c->firmware_path);
+        return -1;
+    }
     if (join(c->sysfs_firmware, c->rproc_dir, "firmware") < 0)
         return -1;
     if (join(c->sysfs_state, c->rproc_dir, "state") < 0)
@@ -93,6 +99,7 @@ int config_init(int argc, char **argv)
         {"rproc", required_argument, NULL, 'r'},
         {"firmware-dir", required_argument, NULL, 'D'},
         {"firmware", required_argument, NULL, 'f'},
+        {"verbose", no_argument, NULL, 'v'},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0},
     };
@@ -103,8 +110,9 @@ int config_init(int argc, char **argv)
     strcpy(c->rproc_dir, BURND_DEFAULT_RPROC);
     strcpy(c->firmware_dir, BURND_DEFAULT_FIRMWARE_DIR);
     strcpy(c->firmware_name, BURND_DEFAULT_FIRMWARE);
+    c->verbose = 0;
 
-    while ((opt = getopt_long(argc, argv, "d:r:D:f:h", longopts, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "d:r:D:f:vh", longopts, NULL)) != -1)
     {
         switch (opt)
         {
@@ -135,6 +143,9 @@ int config_init(int argc, char **argv)
             }
             if (set_str(c->firmware_name, optarg) < 0)
                 return -1;
+            break;
+        case 'v':
+            c->verbose = 1;
             break;
         case 'h':
             usage(stdout, argv[0]);

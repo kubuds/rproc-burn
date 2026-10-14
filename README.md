@@ -31,10 +31,11 @@ burntool -p /dev/ttyACM0 -f firmware.elf
 # 主机端，需要 Go（版本见 burntool/go.mod）
 cd burntool && go test ./... && go build -o burntool .
 
-# 板端，需要 Debian/Ubuntu 的交叉编译器
+# 板端，只依赖 libc，需要 Debian/Ubuntu 的交叉编译器
 sudo apt install gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
 cd burnd && make                 # riscv64
 cd burnd && make ARCH=aarch64    # aarch64
+cd burnd && make ARCH=native test   # 本机跑协议测试，需要 socat
 ```
 
 发布用的脚本在 `scripts/`：`build-burntool.sh` 交叉编译 8 个主机平台并打包，`build-burnd.sh` 出两个架构的板端二进制。打 `vX.Y.Z` 标签后 GitHub Actions 自动跑这两个脚本并发 Release。
@@ -45,7 +46,7 @@ cd burnd && make ARCH=aarch64    # aarch64
 | --- | --- |
 | `burntool-<ver>-<host>.tar.gz` / `.zip` | 主机端二进制，`<host>` 用 Arduino 的三元组命名（`x86_64-linux-gnu`、`arm64-apple-darwin`、`x86_64-mingw32` …），解压后只有一层 `burntool/` 目录 |
 | `burntool-<ver>-systems.json` | 上面每个包的 URL、SHA-256、大小，Arduino Board Manager index 的 `systems` 字段格式，供 sophgo-arduino 的发布脚本直接引用 |
-| `burnd-<ver>-riscv64` / `burnd-<ver>-aarch64` | 板端二进制，静态链接 |
+| `burnd-<ver>-riscv64` / `burnd-<ver>-aarch64` | 板端二进制，静态链接，无第三方依赖 |
 | `SHA256SUMS` | 全部产物的校验和 |
 
 ## 与 sophgo-arduino 的关系

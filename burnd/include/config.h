@@ -25,11 +25,14 @@ struct burnd_config
     /* derived from the fields above by config_init() */
     char firmware_path[BURND_PATH_MAX]; /* firmware_dir/firmware_name */
     char backup_path[BURND_PATH_MAX];   /* previous image, <name>_old.<ext> */
+    char temp_path[BURND_PATH_MAX];     /* image being received, <name>.tmp */
     char sysfs_firmware[BURND_PATH_MAX];/* rproc_dir/firmware */
     char sysfs_state[BURND_PATH_MAX];   /* rproc_dir/state */
 
     /* "burnd load FILE": install FILE and restart the core, then exit. */
     const char *load_file;
+
+    int verbose; /* -v: log every frame and state change */
 };
 
 extern struct burnd_config burnd_cfg;

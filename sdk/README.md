@@ -7,4 +7,4 @@
 - Duo / Duo256 / DuoS 三块板的 Linux defconfig 打开 `REMOTEPROC`、`RPMSG`，buildroot defconfig 打开 `ENABLE_FREERTOS` 以保留小核内存。
 - 往三块板的 overlay 放入 `/usr/bin/burnd`，并在 `usb-rndis.sh` 里拉起它。
 
-补丁里内嵌的 `burnd` 二进制是旧版本，重新出镜像时建议用本仓库 `burnd/` 当前源码重编后替换。
+补丁里内嵌的 `burnd` 二进制是原始版本（libev 实现，路径写死），重新出镜像时用本仓库 Release 里的 `burnd-<ver>-riscv64` 替换即可，协议兼容。

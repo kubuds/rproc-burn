@@ -1,34 +1,42 @@
-ARCH_AARCH64 = aarch64
+# burnd: board-side burn daemon. No dependencies beyond libc, built static
+# so it runs on any image regardless of its libc version.
+#
+#   make                  riscv64 (Duo / Duo256 / DuoS)
+#   make ARCH=aarch64     aarch64
+#   make ARCH=native      host build, for tests
+#   make test             run tests against a fake sysfs and a pty pair
 
-ifeq ($(ARCH_AARCH64), $(ARCH))
-	CROSS_COMPILE = aarch64-linux-gnu-
-	LDFLAGS := -L $(shell pwd)/lib/aarch64 -lev -lm -lz -lpthread
+ARCH ?= riscv64
+
+ifeq ($(ARCH), native)
+	CROSS_COMPILE =
 else
-	CROSS_COMPILE = riscv64-linux-gnu-
-	LDFLAGS := -L $(shell pwd)/lib/riscv64 -lev -lm -lz -lpthread
+	CROSS_COMPILE = $(ARCH)-linux-gnu-
 endif
-
-
-TARGET := burnd
-CFLAGS = -Wall --static -O
-
-CFLAGS  += -I$(shell pwd)/include 
 
 CC = $(CROSS_COMPILE)gcc
 STRIP = $(CROSS_COMPILE)strip
-OBJCOPY = $(CROSS_COMPILE)objcopy
-OBJDUMP = $(CROSS_COMPILE)objdump
 
-SRC = $(wildcard src/*.c)
-OBJS:= $(patsubst %.c, %.o, $(SRC))
+TARGET := burnd
+CFLAGS ?= -O2 -Wall -Wextra
+CFLAGS += -Iinclude
+LDFLAGS += -static
 
-all :$(OBJS)
-	$(CC) $(OBJS) --static -o $(TARGET) $(LDFLAGS)
-	$(STRIP) $(TARGET)
+SRC := $(wildcard src/*.c)
+OBJS := $(patsubst %.c, %.o, $(SRC))
 
-%.o: %.c
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) $(LDFLAGS) -o $@
+	$(STRIP) $@
+
+%.o: %.c $(wildcard include/*.h)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PHONY : clean
+test: all
+	tests/run.sh ./$(TARGET)
+
+.PHONY: all test clean
 clean:
-	rm src/*.o burnd
+	rm -f src/*.o $(TARGET)

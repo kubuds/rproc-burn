@@ -7,6 +7,7 @@
 
 #include "config.h"
 #include "loader.h"
+#include "log.h"
 
 /* How long to wait for a state transition, in 100 ms steps. */
 #define STATE_WAIT_STEPS 30
@@ -18,14 +19,14 @@ static int read_state(char *buf, size_t n)
 
     if (fd < 0)
     {
-        fprintf(stderr, "burnd: open %s: %s\n", burnd_cfg.sysfs_state, strerror(errno));
+        log_err("open %s: %s", burnd_cfg.sysfs_state, strerror(errno));
         return -1;
     }
     len = read(fd, buf, n - 1);
     close(fd);
     if (len < 0)
     {
-        fprintf(stderr, "burnd: read %s: %s\n", burnd_cfg.sysfs_state, strerror(errno));
+        log_err("read %s: %s", burnd_cfg.sysfs_state, strerror(errno));
         return -1;
     }
     buf[len] = '\0';
@@ -41,12 +42,12 @@ static int write_attr(const char *path, const char *value)
 
     if (fd < 0)
     {
-        fprintf(stderr, "burnd: open %s: %s\n", path, strerror(errno));
+        log_err("open %s: %s", path, strerror(errno));
         return -1;
     }
     if (write(fd, value, len) != len)
     {
-        fprintf(stderr, "burnd: write %s to %s: %s\n", value, path, strerror(errno));
+        log_err("write %s to %s: %s", value, path, strerror(errno));
         close(fd);
         return -1;
     }
@@ -67,7 +68,7 @@ static int wait_state(const char *want)
             return 0;
         usleep(100 * 1000);
     }
-    fprintf(stderr, "burnd: remote core did not become %s (state %s)\n", want, state);
+    log_err("remote core did not become %s (state %s)", want, state);
     return -1;
 }
 
@@ -81,7 +82,10 @@ int loader_stop(void)
         return 0;
     if (write_attr(burnd_cfg.sysfs_state, "stop") < 0)
         return -1;
-    return wait_state("offline");
+    if (wait_state("offline") < 0)
+        return -1;
+    log_info("remote core stopped");
+    return 0;
 }
 
 int loader_start(void)
@@ -90,7 +94,40 @@ int loader_start(void)
         return -1;
     if (write_attr(burnd_cfg.sysfs_state, "start") < 0)
         return -1;
-    return wait_state("running");
+    if (wait_state("running") < 0)
+        return -1;
+    log_info("remote core running %s", burnd_cfg.firmware_name);
+    return 0;
+}
+
+int loader_prepare_dir(void)
+{
+    struct stat st;
+
+    if (stat(burnd_cfg.firmware_dir, &st) == 0)
+        return 0;
+    if (mkdir(burnd_cfg.firmware_dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH) < 0)
+    {
+        log_err("mkdir %s: %s", burnd_cfg.firmware_dir, strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
+int loader_commit(const char *tmp)
+{
+    if (access(burnd_cfg.firmware_path, F_OK) == 0)
+    {
+        remove(burnd_cfg.backup_path);
+        if (rename(burnd_cfg.firmware_path, burnd_cfg.backup_path) < 0)
+            log_err("backup %s: %s", burnd_cfg.firmware_path, strerror(errno));
+    }
+    if (rename(tmp, burnd_cfg.firmware_path) < 0)
+    {
+        log_err("rename %s to %s: %s", tmp, burnd_cfg.firmware_path, strerror(errno));
+        return -1;
+    }
+    return 0;
 }
 
 static int copy_file(const char *src, const char *dst)
@@ -103,13 +140,13 @@ static int copy_file(const char *src, const char *dst)
     in = open(src, O_RDONLY);
     if (in < 0)
     {
-        fprintf(stderr, "burnd: open %s: %s\n", src, strerror(errno));
+        log_err("open %s: %s", src, strerror(errno));
         return -1;
     }
     out = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (out < 0)
     {
-        fprintf(stderr, "burnd: create %s: %s\n", dst, strerror(errno));
+        log_err("create %s: %s", dst, strerror(errno));
         close(in);
         return -1;
     }
@@ -117,20 +154,20 @@ static int copy_file(const char *src, const char *dst)
     {
         if (write(out, buf, n) != n)
         {
-            fprintf(stderr, "burnd: write %s: %s\n", dst, strerror(errno));
+            log_err("write %s: %s", dst, strerror(errno));
             ret = -1;
             break;
         }
     }
     if (n < 0)
     {
-        fprintf(stderr, "burnd: read %s: %s\n", src, strerror(errno));
+        log_err("read %s: %s", src, strerror(errno));
         ret = -1;
     }
     close(in);
     if (close(out) < 0)
     {
-        fprintf(stderr, "burnd: close %s: %s\n", dst, strerror(errno));
+        log_err("close %s: %s", dst, strerror(errno));
         ret = -1;
     }
     return ret;
@@ -140,16 +177,12 @@ int loader_install(const char *src)
 {
     struct stat st_src, st_dst;
 
-    if (stat(burnd_cfg.firmware_dir, &st_dst) < 0 &&
-        mkdir(burnd_cfg.firmware_dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH) < 0)
-    {
-        fprintf(stderr, "burnd: mkdir %s: %s\n", burnd_cfg.firmware_dir, strerror(errno));
+    if (loader_prepare_dir() < 0)
         return -1;
-    }
 
     if (stat(src, &st_src) < 0)
     {
-        fprintf(stderr, "burnd: %s: %s\n", src, strerror(errno));
+        log_err("%s: %s", src, strerror(errno));
         return -1;
     }
 
@@ -158,13 +191,13 @@ int loader_install(const char *src)
         st_src.st_ino == st_dst.st_ino && st_src.st_dev == st_dst.st_dev)
         return 0;
 
-    if (access(burnd_cfg.firmware_path, F_OK) == 0)
+    /* Copy to a temp file first so a failed copy never clobbers the image. */
+    if (copy_file(src, burnd_cfg.temp_path) < 0)
     {
-        remove(burnd_cfg.backup_path);
-        if (rename(burnd_cfg.firmware_path, burnd_cfg.backup_path) < 0)
-            fprintf(stderr, "burnd: backup %s: %s\n", burnd_cfg.firmware_path, strerror(errno));
+        unlink(burnd_cfg.temp_path);
+        return -1;
     }
-    return copy_file(src, burnd_cfg.firmware_path);
+    return loader_commit(burnd_cfg.temp_path);
 }
 
 int loader_load(const char *src)
