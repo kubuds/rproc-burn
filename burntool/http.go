@@ -14,7 +14,7 @@ import (
 // repository for a busybox httpd CGI that implements it on top of
 // "burnd load"):
 //
-//	PUT  <base>/firmware   body is the image; the board installs it and
+//	POST <base>/firmware   body is the image; the board installs it and
 //	                       restarts the remote core
 //	POST <base>/state      body "start" or "stop"
 //	GET  <base>/state      current remoteproc state
@@ -44,13 +44,13 @@ func (u *httpUploader) logf(format string, args ...any) {
 	}
 }
 
-// Upload installs the firmware and restarts the core with one PUT.
+// Upload installs the firmware and restarts the core with one POST.
 func (u *httpUploader) Upload(firmware []byte) error {
 	if len(firmware) == 0 {
 		return fmt.Errorf("firmware is empty")
 	}
 	body := &progressReader{r: bytes.NewReader(firmware), total: len(firmware), cb: u.Progress}
-	req, err := http.NewRequest(http.MethodPut, u.Base+"/firmware", body)
+	req, err := http.NewRequest(http.MethodPost, u.Base+"/firmware", body)
 	if err != nil {
 		return err
 	}

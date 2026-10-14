@@ -11,13 +11,13 @@ import (
 	"testing"
 )
 
-// fakeBoardHTTP mimics the CGI in sdk/http: PUT /firmware stores the image.
+// fakeBoardHTTP mimics the CGI in sdk/http: POST /firmware stores the image.
 func fakeBoardHTTP(t *testing.T, fail bool) (*httptest.Server, *bytes.Buffer) {
 	t.Helper()
 	var got bytes.Buffer
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method + " " + r.URL.Path {
-		case "PUT /cgi-bin/burn/firmware":
+		case "POST /cgi-bin/burn/firmware":
 			if fail {
 				http.Error(w, "burnd: remote core did not become running", http.StatusInternalServerError)
 				return

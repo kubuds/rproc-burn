@@ -14,7 +14,7 @@ burntool -v -p /dev/ttyACM0 -f firmware.elf   # 打印每一帧，排查问题�
 burntool --version
 ```
 
-两种传输方式：串口走 `burnd` 的帧协议，HTTP 走 [sdk/http](../sdk/http) 里的 CGI（`PUT /firmware` 上传并重启）。`-p` 和 `-u` 二选一。
+两种传输方式：串口走 `burnd` 的帧协议，HTTP 走 [sdk/http](../sdk/http) 里的 CGI（`POST /firmware` 上传并重启）。`-p` 和 `-u` 二选一。
 
 | 参数 | 说明 |
 | --- | --- |

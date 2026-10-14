@@ -4,7 +4,7 @@
 
 | 方法 | 路径 | 作用 |
 | --- | --- | --- |
-| `PUT` | `/cgi-bin/burn/firmware` | 请求体是固件文件；安装并重启小核 |
+| `POST` | `/cgi-bin/burn/firmware` | 请求体是固件文件；安装并重启小核 |
 | `POST` | `/cgi-bin/burn/state` | 请求体 `start` 或 `stop` |
 | `GET` | `/cgi-bin/burn/state` | 查询 remoteproc 状态 |
 
@@ -19,7 +19,7 @@ httpd -p 8080 -h /www          # 或写进启动脚本
 
 ```sh
 burntool -u http://192.168.42.1:8080/cgi-bin/burn -f firmware.elf
-curl -T firmware.elf http://192.168.42.1:8080/cgi-bin/burn/firmware
+curl --data-binary @firmware.elf http://192.168.42.1:8080/cgi-bin/burn/firmware
 curl -d stop http://192.168.42.1:8080/cgi-bin/burn/state
 ```
 

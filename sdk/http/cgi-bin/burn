@@ -1,8 +1,10 @@
 #!/bin/sh
 # busybox httpd CGI that exposes "burnd load" over HTTP, so burntool -u (or
-# plain curl) can burn a firmware without the USB serial port.
+# plain curl) can burn a firmware without the USB serial port. Uploads use
+# POST rather than PUT because busybox httpd only passes CONTENT_LENGTH to
+# the CGI for POST.
 #
-#   PUT  /cgi-bin/burn/firmware   body = image; install it and restart the core
+#   POST /cgi-bin/burn/firmware   body = image; install it and restart the core
 #   POST /cgi-bin/burn/state      body = "start" | "stop"
 #   GET  /cgi-bin/burn/state      current remoteproc state
 #
@@ -21,7 +23,7 @@ reply() { # code text [body...]
 }
 
 case "$REQUEST_METHOD $PATH_INFO" in
-"PUT /firmware")
+"POST /firmware")
     [ -n "$CONTENT_LENGTH" ] || { reply 411 "Length Required"; exit 0; }
     tmp=$(mktemp /tmp/burn.XXXXXX) || { reply 500 "Internal Server Error" "mktemp failed"; exit 0; }
     head -c "$CONTENT_LENGTH" > "$tmp"
@@ -35,7 +37,7 @@ case "$REQUEST_METHOD $PATH_INFO" in
     rc=$?
     rm -f "$tmp"
     if [ $rc -eq 0 ]; then
-        reply 200 OK "loaded $got bytes" $out
+        reply 200 OK "loaded $got bytes" "$out"
     else
         reply 500 "Internal Server Error" "$out"
     fi
