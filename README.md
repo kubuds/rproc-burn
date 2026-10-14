@@ -1,6 +1,6 @@
-# sg200x-burn
+# rproc-burn
 
-给 SG200X 系列（Milk-V Duo / Duo256 / DuoS 等，CV1800B / SG2002 / SG2000）小核 C906L 烧写固件的一对工具：
+给 Linux 大核旁边的小核（remoteproc 管理的协处理器）烧写固件的一对工具。目前支持的板子是 SG200X 系列（Milk-V Duo / Duo256 / DuoS，CV1800B / SG2002 / SG2000）的 C906L；机制本身只依赖内核标准的 remoteproc 接口，带 remoteproc 驱动的其他 SoC 换参数即可复用。
 
 | 目录 | 跑在哪 | 作用 |
 | --- | --- | --- |

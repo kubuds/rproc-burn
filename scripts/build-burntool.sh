@@ -13,7 +13,7 @@ set -euo pipefail
 VERSION=${1:?usage: $0 <version> [out-dir]}
 OUT=${2:-dist}
 GO=${GO:-go}
-REPO=${GITHUB_REPOSITORY:-kubuds/sg200x-burn}
+REPO=${GITHUB_REPOSITORY:-kubuds/rproc-burn}
 DOWNLOAD_URL=${DOWNLOAD_URL:-https://github.com/$REPO/releases/download/v$VERSION}
 
 # Arduino host triplet -> GOOS/GOARCH. The triplet is what arduino-cli
