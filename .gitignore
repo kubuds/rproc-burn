@@ -1,0 +1,5 @@
+/dist/
+/burnd/burnd
+/burnd/src/*.o
+/burntool/burntool
+/burntool/burntool.exe

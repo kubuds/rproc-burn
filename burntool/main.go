@@ -2,7 +2,7 @@
 // over its USB serial port and restarts the small core with it.
 //
 // The board side is the burnd daemon shipped in the SD-card image; see
-// tools/burn in this repository for its source and protocol.go for the
+// burnd/ in this repository for its source and protocol.go for the
 // wire format.
 package main
 

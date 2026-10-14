@@ -1,4 +1,4 @@
-module github.com/kubuds/sophgo-arduino/tools/burntool
+module github.com/kubuds/sg200x-burn/burntool
 
 go 1.25.0
 
