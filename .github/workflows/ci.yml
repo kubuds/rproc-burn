@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  burntool:
+    name: burntool (host tool)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burntool/go.mod
+          cache-dependency-path: burntool/go.sum
+      - name: Vet and test
+        working-directory: burntool
+        run: |
+          go vet ./...
+          go test -race ./...
+      - name: Cross-compile every host
+        run: scripts/build-burntool.sh 0.0.0-ci dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: burntool
+          path: dist/
+
+  burnd:
+    name: burnd (board daemon)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
+      - name: Build riscv64 and aarch64
+        run: scripts/build-burnd.sh 0.0.0-ci dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: burnd
+          path: dist/

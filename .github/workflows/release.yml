@@ -1,0 +1,46 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds burntool for every host and burnd for both
+# architectures, then publishes them as a GitHub release. The version baked
+# into the binaries and file names is the tag without the leading "v".
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burntool/go.mod
+          cache-dependency-path: burntool/go.sum
+      - name: Install cross compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
+
+      - name: Test burntool
+        working-directory: burntool
+        run: |
+          go vet ./...
+          go test -race ./...
+
+      - name: Build
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION=${VERSION#v}
+          scripts/build-burntool.sh "$VERSION" dist
+          scripts/build-burnd.sh "$VERSION" dist
+          (cd dist && sha256sum -- * > SHA256SUMS)
+          ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
