@@ -53,7 +53,7 @@ src/log.c       stderr + syslog
 只需要交叉编译器。Debian/Ubuntu：
 
 ```bash
-sudo apt install gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
+sudo apt install gcc-riscv64-linux-gnu libc6-dev-riscv64-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross
 
 make                   # riscv64：Duo / Duo256 / DuoS 的 Linux 侧
 make ARCH=aarch64      # aarch64：DuoS 跑 ARM 大核时

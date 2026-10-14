@@ -32,7 +32,7 @@ burntool -p /dev/ttyACM0 -f firmware.elf
 cd burntool && go test ./... && go build -o burntool .
 
 # 板端，只依赖 libc，需要 Debian/Ubuntu 的交叉编译器
-sudo apt install gcc-riscv64-linux-gnu gcc-aarch64-linux-gnu
+sudo apt install gcc-riscv64-linux-gnu libc6-dev-riscv64-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross
 cd burnd && make                 # riscv64
 cd burnd && make ARCH=aarch64    # aarch64
 cd burnd && make ARCH=native test   # 本机跑协议测试，需要 socat
