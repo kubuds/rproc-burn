@@ -65,7 +65,7 @@ CRC32 是 zlib 的 `crc32()`（IEEE 802.3，和 Go 的 `crc32.ChecksumIEEE` 相�
 - **按 64 字节读。** 板端每次 `read()` 最多拿 64 字节。接收期间所有数据原样入队，直到累计字节数等于 `length`。
 - **tail 必须单独成一次读。** 累计字节数达到 `length` 后，下一次读到的 8 字节如果第 4–7 字节为 `FF FF FF FF`，才被当作 tail。若 tail 和最后一段固件数据落在同一次 `read()` 里，会被当作多余数据丢弃，板端永远等不到 tail，20 s 后超时。所以主机端在固件发完后要停顿再发 tail（`burntool` 默认 500 ms，`--tail-delay` 可调）。
 - **接收期间不处理命令。** 从 `UPDATE` 应答到 tail 应答之间，`AA 55` 开头的数据都当固件内容；唯一例外是距 `UPDATE` 已超过 20 s，此时板端丢弃缓冲并退回空闲状态，之后的帧重新按命令解析。
-- **固件路径固定。** 写到 `/lib/firmware/arduino.elf`，旧文件先改名为 `arduino_old.elf`。`START` 也固定加载 `arduino.elf`。
+- **固件路径由 burnd 的参数决定。** 默认写到 `/lib/firmware/arduino.elf`，旧文件先改名为 `arduino_old.elf`；`START` 加载的也是这个名字。协议里不传文件名，主机端无法指定。
 - **reply 可能夹杂杂音。** 串口刚打开时可能有残留字节，主机端应丢弃 `AA 55` 之前的内容再凑帧（`burntool` 的 `appendFrame` 就是干这个）。
 - **STOP 的返回值不可靠。** `stop_task` 里的返回值是 `static`，小核本来就没在跑时会返回上一次的结果。主机端把 STOP 的非 OK 当作提示而不是错误。
 

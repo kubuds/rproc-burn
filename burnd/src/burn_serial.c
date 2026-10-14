@@ -6,13 +6,13 @@
 #include "burn_serial.h"
 #include "global.h"
 
-int uart_init(int *fd, int speed, int data_bit, int stop, int check)
+int uart_init(int *fd, const char *port, int speed, int data_bit, int stop, int check)
 {
     struct termios opt;
-    *fd = open(UART_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+    *fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
     if (-1 == *fd)
     {
-        pr_log(LOG_ERR, "open uart %s failed\r\n", UART_PORT);
+        pr_log(LOG_ERR, "open uart %s failed\r\n", port);
         goto err1;
     }
     if (0 != tcgetattr(*fd, &opt))

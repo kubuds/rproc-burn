@@ -14,6 +14,7 @@
 #include "global.h"
 #include "queue.h"
 #include "task.h"
+#include "config.h"
 #include "zlib.h"
 
 void *g_handlertid;
@@ -77,7 +78,7 @@ int echo_firmware()
 {
     static int ret = TK_OK;
     int firmware_fd;
-    firmware_fd = open(SYSFS_FIRMWARE, O_RDWR);
+    firmware_fd = open(burnd_cfg.sysfs_firmware, O_RDWR);
 
     if (firmware_fd < 0)
     {
@@ -86,7 +87,7 @@ int echo_firmware()
         goto err;
     }
 
-    if (write(firmware_fd, FIRMWARE_NAME, 11) < 0)
+    if (write(firmware_fd, burnd_cfg.firmware_name, strlen(burnd_cfg.firmware_name)) < 0)
     {
         pr_log(LOG_ERR, "write TK_OPTS_ERR...");
         ret = TK_OPTS_ERR;
@@ -104,7 +105,7 @@ int ctrl_firmware(int flag)
     int count = 0;
     int state_fd;
 
-    state_fd = open(SYSFS_STATE, O_RDWR);
+    state_fd = open(burnd_cfg.sysfs_state, O_RDWR);
     if (state_fd < 0)
     {
         pr_log(LOG_ERR, "firmware_fd TK_OPTS_ERR...");
@@ -159,7 +160,7 @@ void *start_task(void *arg)
         pr_log(LOG_INFO, "echo firmware faild...");
         goto err;
     }
-    // firmware_fd = open(SYSFS_FIRMWARE, O_RDWR);
+    // firmware_fd = open(burnd_cfg.sysfs_firmware, O_RDWR);
     // if (firmware_fd < 0)
     // {
     //     pr_log(LOG_ERR, "firmware_fd TK_OPTS_ERR...");
@@ -167,7 +168,7 @@ void *start_task(void *arg)
     //     goto err;
     // }
 
-    // if (write(firmware_fd, FIRMWARE_NAME, 11) < 0)
+    // if (write(firmware_fd, burnd_cfg.firmware_name, strlen(burnd_cfg.firmware_name)) < 0)
     // {
     //     pr_log(LOG_ERR, "write TK_OPTS_ERR...");
     //     ret = TK_OPTS_ERR;
@@ -177,7 +178,7 @@ void *start_task(void *arg)
 
     // close(firmware_fd);
 
-    state_fd = open(SYSFS_STATE, O_RDWR);
+    state_fd = open(burnd_cfg.sysfs_state, O_RDWR);
     if (state_fd < 0)
     {
         pr_log(LOG_ERR, "open TK_OPTS_ERR...");
@@ -218,7 +219,7 @@ void *stop_task(void *arg)
     char buf[8];
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    state_fd = open(SYSFS_STATE, O_RDWR);
+    state_fd = open(burnd_cfg.sysfs_state, O_RDWR);
     if (state_fd < 0)
     {
         pr_log(LOG_ERR, "open TK_OPTS_ERR...");
@@ -267,20 +268,20 @@ void *update_task(void *arg)
     uint32_t img_crc32;
 
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    if (stat(FIRMWARE_DIR, &firmware_st) == -1)
+    if (stat(burnd_cfg.firmware_dir, &firmware_st) == -1)
     {
-        result = mkdir(FIRMWARE_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH);
+        result = mkdir(burnd_cfg.firmware_dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH);
         if (result != 0)
         {
             ret = TK_OPTS_ERR;
-            pr_log(LOG_ERR, "fail create /lib/firmware...");
+            pr_log(LOG_ERR, "fail create %s...", burnd_cfg.firmware_dir);
             goto err;
         }
     }
 
-    if (access(FIRMWARE_PATH, F_OK) != -1)
+    if (access(burnd_cfg.firmware_path, F_OK) != -1)
     {
-        if (remove(REC_FIRMWARE_PATH) == 0)
+        if (remove(burnd_cfg.backup_path) == 0)
         {
             pr_log(LOG_INFO, "remove old arduino firmware!");
         }
@@ -289,7 +290,7 @@ void *update_task(void *arg)
             pr_log(LOG_ERR, "no remove old arduino firmware!");
         }
 
-        if (rename(FIRMWARE_PATH, REC_FIRMWARE_PATH) == 0)
+        if (rename(burnd_cfg.firmware_path, burnd_cfg.backup_path) == 0)
         {
             pr_log(LOG_INFO, "backup arduino firmware!");
         }
@@ -299,7 +300,7 @@ void *update_task(void *arg)
         }
     }
 
-    write_ptr = fopen(FIRMWARE_PATH, "wb");
+    write_ptr = fopen(burnd_cfg.firmware_path, "wb");
     while (1)
     {
         sem_wait(&sem);
@@ -318,7 +319,7 @@ void *update_task(void *arg)
         if (read_buffer == NULL)
         {
             fclose(write_ptr);
-            calc_img_crc32(FIRMWARE_PATH, &img_crc32);
+            calc_img_crc32(burnd_cfg.firmware_path, &img_crc32);
             if (w_total == client->read_count && crc32 == img_crc32)
             {
                 ret = TK_OK;

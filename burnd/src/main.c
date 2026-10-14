@@ -11,13 +11,20 @@
 #include "burn_serial.h"
 #include "data.h"
 #include "task.h"
+#include "config.h"
 
 pthread_mutex_t bf_mutex;
 sem_t sem;
 struct downloader_client *main_client = NULL;
 
-int main()
+int main(int argc, char **argv)
 {
+    int ret;
+
+    ret = config_init(argc, argv);
+    if (ret != 0)
+        return ret < 0 ? 2 : 0;
+
     openlog("brund", LOG_PID | LOG_NDELAY, LOG_USER);
     main_client = calloc(1, sizeof(*main_client));
     if (main_client == NULL)
@@ -40,7 +47,7 @@ int main()
         goto err1;
     }
 
-    if (0 != uart_init(&(main_client->fd), UART_SPEED, UART_DATA_BIT,
+    if (0 != uart_init(&(main_client->fd), burnd_cfg.device, UART_SPEED, UART_DATA_BIT,
                        UART_STOP_BIT, UART_CHECK_BIT))
     {
         pr_log(LOG_ERR, "uart init failed");
@@ -48,7 +55,7 @@ int main()
     }
 
     // atuo boot
-    if (access(FIRMWARE_PATH, F_OK) == 0)
+    if (access(burnd_cfg.firmware_path, F_OK) == 0)
     {
         echo_firmware();
         if (ctrl_firmware(FIRMWARE_ON) == TK_OK)

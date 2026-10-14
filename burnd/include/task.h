@@ -7,12 +7,6 @@ enum
     FIRMWARE_ON,
 };
 
-#define FIRMWARE_DIR "/lib/firmware"
-#define FIRMWARE_NAME "arduino.elf"
-#define FIRMWARE_PATH "/lib/firmware/arduino.elf"
-#define REC_FIRMWARE_PATH "/lib/firmware/arduino_old.elf"
-#define SYSFS_FIRMWARE "/sys/class/remoteproc/remoteproc0/firmware"
-#define SYSFS_STATE "/sys/class/remoteproc/remoteproc0/state"
 
 extern int echo_firmware();
 extern int ctrl_firmware(int flag);

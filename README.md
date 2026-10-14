@@ -5,7 +5,7 @@
 | 目录 | 跑在哪 | 作用 |
 | --- | --- | --- |
 | [`burntool/`](burntool/) | 主机（Windows / Linux / macOS） | 通过 USB 串口把 ELF 发给板子，单文件 Go 二进制 |
-| [`burnd/`](burnd/) | 板子的 Linux 侧 | 收固件、校验、经 remoteproc 重启小核，随 SD 卡镜像预装 |
+| [`burnd/`](burnd/) | 板子的 Linux 侧 | 收固件、校验、经 remoteproc 重启小核，随 SD 卡镜像预装；串口、remoteproc 节点、固件名均可通过参数指定 |
 | [`sdk/`](sdk/) | — | 让镜像支持 remoteproc 与 burnd 的 duo-buildroot-sdk 补丁 |
 | [`docs/`](docs/) | — | 串口协议、固件格式约束 |
 
