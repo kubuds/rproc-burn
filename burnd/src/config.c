@@ -9,10 +9,12 @@ struct burnd_config burnd_cfg;
 static void usage(FILE *out, const char *prog)
 {
     fprintf(out,
-            "Usage: %s [options]\n"
+            "Usage: %s [options]            run the serial burn service\n"
+            "       %s [options] load FILE  install FILE, restart the core, exit\n"
             "\n"
             "Receive firmware over a serial port and load it on the remote core\n"
-            "through the Linux remoteproc interface.\n"
+            "through the Linux remoteproc interface. The load form skips the\n"
+            "serial port so any other transport (scp, http) can trigger a burn.\n"
             "\n"
             "  -d, --device PATH        serial device to listen on (default %s)\n"
             "  -r, --rproc PATH|NAME    remoteproc sysfs directory, or a name under\n"
@@ -21,7 +23,7 @@ static void usage(FILE *out, const char *prog)
             "                           (default %s)\n"
             "  -f, --firmware NAME      firmware file name (default %s)\n"
             "  -h, --help               show this help\n",
-            prog, BURND_DEFAULT_DEVICE, BURND_DEFAULT_RPROC,
+            prog, prog, BURND_DEFAULT_DEVICE, BURND_DEFAULT_RPROC,
             BURND_DEFAULT_FIRMWARE_DIR, BURND_DEFAULT_FIRMWARE);
 }
 
@@ -143,11 +145,19 @@ int config_init(int argc, char **argv)
         }
     }
 
+    c->load_file = NULL;
     if (optind < argc)
     {
-        fprintf(stderr, "burnd: unexpected argument: %s\n", argv[optind]);
-        usage(stderr, argv[0]);
-        return -1;
+        if (strcmp(argv[optind], "load") == 0 && optind + 2 == argc)
+        {
+            c->load_file = argv[optind + 1];
+        }
+        else
+        {
+            fprintf(stderr, "burnd: unexpected argument: %s\n", argv[optind]);
+            usage(stderr, argv[0]);
+            return -1;
+        }
     }
 
     return derive_paths(c);

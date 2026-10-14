@@ -11,7 +11,7 @@ func TestRunFlagErrors(t *testing.T) {
 		args []string
 		want string
 	}{
-		{nil, "serial port not set"},
+		{nil, "serial port (-p) or URL (-u) not set"},
 		{[]string{"-p", "/dev/null"}, "firmware file not set"},
 		{[]string{"-p", "/dev/null", "-f", "x", "extra"}, "unexpected argument"},
 	}

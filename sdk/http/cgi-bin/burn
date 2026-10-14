@@ -1,0 +1,68 @@
+#!/bin/sh
+# busybox httpd CGI that exposes "burnd load" over HTTP, so burntool -u (or
+# plain curl) can burn a firmware without the USB serial port.
+#
+#   PUT  /cgi-bin/burn/firmware   body = image; install it and restart the core
+#   POST /cgi-bin/burn/state      body = "start" | "stop"
+#   GET  /cgi-bin/burn/state      current remoteproc state
+#
+# Install:  cp burn /www/cgi-bin/burn && chmod +x /www/cgi-bin/burn
+#           httpd -p 8080 -h /www
+# Options for burnd (-r, -f, ...) go into BURND_OPTS below.
+
+BURND=${BURND:-burnd}
+BURND_OPTS=${BURND_OPTS:-}
+RPROC=${RPROC:-/sys/class/remoteproc/remoteproc0}
+
+reply() { # code text [body...]
+    printf 'HTTP/1.1 %s %s\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n' "$1" "$2"
+    shift 2
+    [ $# -gt 0 ] && printf '%s\n' "$@"
+}
+
+case "$REQUEST_METHOD $PATH_INFO" in
+"PUT /firmware")
+    [ -n "$CONTENT_LENGTH" ] || { reply 411 "Length Required"; exit 0; }
+    tmp=$(mktemp /tmp/burn.XXXXXX) || { reply 500 "Internal Server Error" "mktemp failed"; exit 0; }
+    head -c "$CONTENT_LENGTH" > "$tmp"
+    got=$(wc -c < "$tmp")
+    if [ "$got" != "$CONTENT_LENGTH" ]; then
+        rm -f "$tmp"
+        reply 400 "Bad Request" "received $got of $CONTENT_LENGTH bytes"
+        exit 0
+    fi
+    out=$("$BURND" $BURND_OPTS load "$tmp" 2>&1)
+    rc=$?
+    rm -f "$tmp"
+    if [ $rc -eq 0 ]; then
+        reply 200 OK "loaded $got bytes" $out
+    else
+        reply 500 "Internal Server Error" "$out"
+    fi
+    ;;
+"POST /state")
+    want=$(head -c "${CONTENT_LENGTH:-0}" | tr -d '\r\n ')
+    case "$want" in
+    start|stop)
+        if echo "$want" > "$RPROC/state" 2>/dev/null; then
+            reply 200 OK "$want"
+        else
+            reply 500 "Internal Server Error" "cannot write $want to $RPROC/state"
+        fi
+        ;;
+    *)
+        reply 400 "Bad Request" "body must be start or stop"
+        ;;
+    esac
+    ;;
+"GET /state")
+    if state=$(cat "$RPROC/state" 2>/dev/null); then
+        reply 200 OK "$state"
+    else
+        reply 500 "Internal Server Error" "cannot read $RPROC/state"
+    fi
+    ;;
+*)
+    reply 404 "Not Found" "$REQUEST_METHOD $PATH_INFO"
+    ;;
+esac

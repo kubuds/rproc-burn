@@ -4,9 +4,9 @@
 
 | 目录 | 跑在哪 | 作用 |
 | --- | --- | --- |
-| [`burntool/`](burntool/) | 主机（Windows / Linux / macOS） | 通过 USB 串口把 ELF 发给板子，单文件 Go 二进制 |
+| [`burntool/`](burntool/) | 主机（Windows / Linux / macOS） | 通过 USB 串口或 HTTP 把 ELF 发给板子，单文件 Go 二进制 |
 | [`burnd/`](burnd/) | 板子的 Linux 侧 | 收固件、校验、经 remoteproc 重启小核，随 SD 卡镜像预装；串口、remoteproc 节点、固件名均可通过参数指定 |
-| [`sdk/`](sdk/) | — | 让镜像支持 remoteproc 与 burnd 的 duo-buildroot-sdk 补丁 |
+| [`sdk/`](sdk/) | — | duo-buildroot-sdk 补丁；`sdk/http` 是用 busybox httpd 提供 HTTP 烧录的 CGI |
 | [`docs/`](docs/) | — | 串口协议、固件格式约束 |
 
 原本放在 [kubuds/sophgo-arduino](https://github.com/kubuds/sophgo-arduino) 的 `tools/` 下，拆出来单独维护，是因为烧录器本身和 Arduino 无关：任何按 [docs/firmware.md](docs/firmware.md) 链接的 ELF（Arduino sketch、RT-Thread、裸机程序）都能用它烧。
@@ -22,6 +22,8 @@ burntool -p /dev/ttyACM0 -f firmware.elf
 ```
 
 成功后小核立即从新固件启动；固件会被保存在板子的 `/lib/firmware/arduino.elf`，上一版备份为 `arduino_old.elf`。
+
+串口之外的任何传输方式都可以：把文件送到板上后执行 `burnd load FILE` 即可（scp + ssh，或 [sdk/http](sdk/http) 的 HTTP 接口配合 `burntool -u`）。
 
 ## 构建
 

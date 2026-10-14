@@ -1,9 +1,9 @@
-// Command burntool uploads an Arduino sketch (ELF image) to an SG200X board
-// over its USB serial port and restarts the small core with it.
+// Command burntool uploads a firmware image (ELF) to a board running the
+// burnd service and restarts the remote core with it.
 //
-// The board side is the burnd daemon shipped in the SD-card image; see
-// burnd/ in this repository for its source and protocol.go for the
-// wire format.
+// Two transports are available: the USB serial port spoken by the burnd
+// daemon (protocol.go, client.go) and HTTP against the small API in
+// http.go, which a board can provide with sdk/http on top of "burnd load".
 package main
 
 import (
@@ -21,6 +21,7 @@ var version = "dev"
 
 type options struct {
 	port      string
+	url       string
 	firmware  string
 	baud      int
 	chip      string // accepted for compatibility with the old tool, unused
@@ -65,6 +66,9 @@ func parseFlags(args []string, stderr io.Writer) (*options, error) {
 	for _, name := range []string{"p", "port"} {
 		fs.StringVar(&o.port, name, os.Getenv("BURNTOOL_PORT"), "")
 	}
+	for _, name := range []string{"u", "url"} {
+		fs.StringVar(&o.url, name, os.Getenv("BURNTOOL_URL"), "")
+	}
 	for _, name := range []string{"f", "firmware"} {
 		fs.StringVar(&o.firmware, name, os.Getenv("BURNTOOL_FIRMWARE"), "")
 	}
@@ -83,11 +87,15 @@ func parseFlags(args []string, stderr io.Writer) (*options, error) {
 
 	fs.Usage = func() {
 		fmt.Fprintf(stderr, `Usage: burntool -p PORT -f FIRMWARE [options]
+       burntool -u URL  -f FIRMWARE [options]
 
-Upload a firmware image to an SG200X board through the burnd serial service.
+Upload a firmware image to a board running burnd and restart its remote core,
+over the USB serial port or over HTTP.
 
 Options:
   -p, --port PORT        serial port, e.g. /dev/ttyACM0 or COM3 (env BURNTOOL_PORT)
+  -u, --url URL          HTTP endpoint instead of a serial port, e.g.
+                         http://192.168.42.1/cgi-bin/burn (env BURNTOOL_URL)
   -f, --firmware FILE    firmware image to upload (env BURNTOOL_FIRMWARE)
   -b, --baud RATE        baud rate, ignored by USB CDC ports (default 115200)
   -c, --chip NAME        accepted for compatibility, unused
@@ -108,8 +116,11 @@ Options:
 	if o.version {
 		return o, nil
 	}
-	if o.port == "" {
-		return nil, errors.New("serial port not set (-p)")
+	if o.port == "" && o.url == "" {
+		return nil, errors.New("serial port (-p) or URL (-u) not set")
+	}
+	if o.port != "" && o.url != "" {
+		return nil, errors.New("use either a serial port (-p) or a URL (-u), not both")
 	}
 	if o.firmware == "" {
 		return nil, errors.New("firmware file not set (-f)")
@@ -132,6 +143,25 @@ func upload(o *options, stdout, stderr io.Writer) error {
 	}
 	fmt.Fprintf(stdout, "firmware: %s (%d bytes)\n", o.firmware, len(firmware))
 
+	var logf func(format string, args ...any)
+	if o.verbose {
+		logf = func(format string, args ...any) {
+			fmt.Fprintf(stderr, format+"\n", args...)
+		}
+	}
+
+	if o.url != "" {
+		u := newHTTPUploader(o.url)
+		u.Progress = progressPrinter(stdout)
+		u.Logf = logf
+		fmt.Fprintf(stdout, "url: %s\n", u.Base)
+		if err := u.Upload(firmware); err != nil {
+			return err
+		}
+		fmt.Fprintln(stdout, "upload done, firmware running")
+		return nil
+	}
+
 	port, err := openSerial(o.port, o.baud)
 	if err != nil {
 		return err
@@ -143,11 +173,7 @@ func upload(o *options, stdout, stderr io.Writer) error {
 	c.ReplyTimeout = o.timeout
 	c.TailDelay = o.tailDelay
 	c.Progress = progressPrinter(stdout)
-	if o.verbose {
-		c.Logf = func(format string, args ...any) {
-			fmt.Fprintf(stderr, format+"\n", args...)
-		}
-	}
+	c.Logf = logf
 
 	fmt.Fprintln(stdout, "connecting...")
 	if err := c.Upload(firmware); err != nil {

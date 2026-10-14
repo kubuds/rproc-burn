@@ -7,15 +7,19 @@
 ### 用法
 
 ```bash
-burntool -p /dev/ttyACM0 -f firmware.elf      # Linux / macOS
+burntool -p /dev/ttyACM0 -f firmware.elf      # Linux / macOS，USB 串口
 burntool -p COM3 -f firmware.elf              # Windows
+burntool -u http://192.168.42.1:8080/cgi-bin/burn -f firmware.elf   # HTTP，见 sdk/http
 burntool -v -p /dev/ttyACM0 -f firmware.elf   # 打印每一帧，排查问题用
 burntool --version
 ```
 
+两种传输方式：串口走 `burnd` 的帧协议，HTTP 走 [sdk/http](../sdk/http) 里的 CGI（`PUT /firmware` 上传并重启）。`-p` 和 `-u` 二选一。
+
 | 参数 | 说明 |
 | --- | --- |
 | `-p`, `--port` | 串口设备，也可用环境变量 `BURNTOOL_PORT` |
+| `-u`, `--url` | HTTP 端点，也可用 `BURNTOOL_URL`；与 `-p` 互斥 |
 | `-f`, `--firmware` | 要烧录的 ELF，也可用 `BURNTOOL_FIRMWARE` |
 | `-b`, `--baud` | 波特率，默认 115200 |
 | `--timeout` | 等待板端应答的秒数 |

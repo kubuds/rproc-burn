@@ -2,7 +2,7 @@
 
 运行在板子 Linux 侧的烧录守护进程。它监听一个串口（默认 USB gadget 串口 `/dev/ttyGS0`，115200），接收主机端 `burntool` 发来的固件，写到固件目录，再通过 remoteproc 的 sysfs 接口停止、加载、启动小核。协议见 [docs/protocol.md](../docs/protocol.md)。
 
-它只依赖内核标准的 remoteproc 接口，不含任何 SG200X 专属逻辑；换一块有 remoteproc 驱动的板子，调整下面的参数即可复用。
+它只依赖内核标准的 remoteproc 接口，不含任何 SG200X 专属逻辑；换一块有 remoteproc 驱动的板子，调整下面的参数即可复用。串口只是传输方式之一，见下面的 `load` 子命令。
 
 ### 参数
 
@@ -21,6 +21,17 @@ burnd -r remoteproc1 -f rtthread.elf
 ```
 
 启动时若固件文件已存在，burnd 会先把它加载并启动（自动引导），再开始监听串口。
+
+### 一次性模式：`burnd load FILE`
+
+不开串口，直接停小核、把 `FILE` 拷到固件目录（旧文件备份）、重新启动，然后退出。退出码 0 成功、1 失败，原因打印到 stderr。它是「任意方式上传 + 触发」的通用入口：
+
+```sh
+scp firmware.elf root@192.168.42.1:/tmp/ && ssh root@192.168.42.1 burnd load /tmp/firmware.elf
+burnd load /lib/firmware/arduino.elf        # 文件已在原位时只做重启
+```
+
+[sdk/http](../sdk/http) 用它实现了一个 HTTP 接口。实现在 `src/loader.c`，和串口协议无关。
 
 预编译的 `burnd` 随 Milk-V 的 Arduino 版 SD 卡镜像一起发布（见 [sdk/](../sdk/)），由镜像里的 `usb-rndis.sh` 在 USB 串口就绪后拉起。
 

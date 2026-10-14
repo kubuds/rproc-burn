@@ -27,6 +27,9 @@ struct burnd_config
     char backup_path[BURND_PATH_MAX];   /* previous image, <name>_old.<ext> */
     char sysfs_firmware[BURND_PATH_MAX];/* rproc_dir/firmware */
     char sysfs_state[BURND_PATH_MAX];   /* rproc_dir/state */
+
+    /* "burnd load FILE": install FILE and restart the core, then exit. */
+    const char *load_file;
 };
 
 extern struct burnd_config burnd_cfg;

@@ -12,6 +12,7 @@
 #include "data.h"
 #include "task.h"
 #include "config.h"
+#include "loader.h"
 
 pthread_mutex_t bf_mutex;
 sem_t sem;
@@ -24,6 +25,9 @@ int main(int argc, char **argv)
     ret = config_init(argc, argv);
     if (ret != 0)
         return ret < 0 ? 2 : 0;
+
+    if (burnd_cfg.load_file != NULL)
+        return loader_load(burnd_cfg.load_file) == 0 ? 0 : 1;
 
     openlog("brund", LOG_PID | LOG_NDELAY, LOG_USER);
     main_client = calloc(1, sizeof(*main_client));
