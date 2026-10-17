@@ -65,7 +65,8 @@ make ARCH=native       # 本机，跑测试用
 ### 测试
 
 ```bash
-make ARCH=native test
+make ARCH=native test     # 本机构建
+make ARCH=riscv64 test    # 交叉构建的二进制在 qemu-riscv64-static 下跑同一套测试
 ```
 
-`tests/run.sh` 用 socat 建一对 pty、一个模拟内核行为的假 sysfs 目录，再用 `tests/client.py`（纯 Python，不依赖 pyserial）按协议跑：正常上传、尾帧紧贴数据、二次上传留备份、CRC 错误被拒且旧固件不受影响、STOP/START、未知命令、帧前杂音。需要 `socat` 和 `python3`。
+`tests/run.sh` 用 socat 建一对 pty、一个模拟内核行为的假 sysfs 目录，再用 `tests/client.py`（纯 Python，不依赖 pyserial）按协议跑：正常上传、尾帧紧贴数据、二次上传留备份、CRC 错误被拒且旧固件不受影响、STOP/START、未知命令、帧前杂音。需要 `socat` 和 `python3`；跑交叉构建还需要 `qemu-user-static`（脚本通过 `BURND_RUNNER` 环境变量接收运行器）。

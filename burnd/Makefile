@@ -4,14 +4,17 @@
 #   make                  riscv64 (Duo / Duo256 / DuoS)
 #   make ARCH=aarch64     aarch64
 #   make ARCH=native      host build, for tests
-#   make test             run tests against a fake sysfs and a pty pair
+#   make test             run tests against a fake sysfs and a pty pair;
+#                         a cross-built burnd runs under qemu-<arch>-static
 
 ARCH ?= riscv64
 
 ifeq ($(ARCH), native)
 	CROSS_COMPILE =
+	RUNNER =
 else
 	CROSS_COMPILE = $(ARCH)-linux-gnu-
+	RUNNER = qemu-$(ARCH)-static
 endif
 
 CC = $(CROSS_COMPILE)gcc
@@ -35,7 +38,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 test: all
-	tests/run.sh ./$(TARGET)
+	BURND_RUNNER="$(RUNNER)" tests/run.sh ./$(TARGET)
 
 .PHONY: all test clean
 clean:

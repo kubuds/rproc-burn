@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Exercise burnd against a fake remoteproc sysfs directory and a pty pair.
 # Usage: tests/run.sh path/to/burnd   (needs socat and python3)
+# Set BURND_RUNNER (e.g. qemu-riscv64-static) to run a cross-built binary.
 set -euo pipefail
 
 BURND=$(realpath "${1:?usage: $0 path/to/burnd}")
+RUNNER=${BURND_RUNNER:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 WORK=$(mktemp -d)
 trap 'kill $(jobs -p) 2>/dev/null; wait 2>/dev/null; rm -rf "$WORK"' EXIT
@@ -26,7 +28,7 @@ echo cvirtos.elf > "$WORK/rproc/firmware"
 socat -d -d pty,raw,echo=0,link="$WORK/board" pty,raw,echo=0,link="$WORK/host" 2>/dev/null &
 for _ in $(seq 50); do [ -e "$WORK/board" ] && [ -e "$WORK/host" ] && break; sleep 0.1; done
 
-"$BURND" -v -d "$WORK/board" -r "$WORK/rproc" -D "$WORK/fw" -f test.elf 2> "$WORK/burnd.log" &
+$RUNNER "$BURND" -v -d "$WORK/board" -r "$WORK/rproc" -D "$WORK/fw" -f test.elf 2> "$WORK/burnd.log" &
 sleep 0.3
 
 fail() { echo "FAIL: $*"; echo "--- burnd log"; cat "$WORK/burnd.log"; exit 1; }

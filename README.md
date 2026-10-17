@@ -36,6 +36,7 @@ sudo apt install gcc-riscv64-linux-gnu libc6-dev-riscv64-cross gcc-aarch64-linux
 cd burnd && make                 # riscv64
 cd burnd && make ARCH=aarch64    # aarch64
 cd burnd && make ARCH=native test   # 本机跑协议测试，需要 socat
+cd burnd && make ARCH=riscv64 test  # 同一套测试跑交叉构建的二进制，需要 qemu-user-static
 ```
 
 发布用的脚本在 `scripts/`：`build-burntool.sh` 交叉编译 8 个主机平台并打包，`build-burnd.sh` 出两个架构的板端二进制。打 `vX.Y.Z` 标签后 GitHub Actions 自动跑这两个脚本并发 Release。

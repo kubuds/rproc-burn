@@ -35,10 +35,16 @@ jobs:
       - name: Install cross compilers and test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-riscv64-linux-gnu libc6-dev-riscv64-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross socat
+          sudo apt-get install -y --no-install-recommends gcc-riscv64-linux-gnu libc6-dev-riscv64-cross gcc-aarch64-linux-gnu libc6-dev-arm64-cross socat qemu-user-static
       - name: Protocol tests on a native build
         working-directory: burnd
         run: make ARCH=native test
+      - name: Protocol tests on the riscv64 build (qemu-user)
+        working-directory: burnd
+        run: make clean && make ARCH=riscv64 test
+      - name: Protocol tests on the aarch64 build (qemu-user)
+        working-directory: burnd
+        run: make clean && make ARCH=aarch64 test
       - name: Build riscv64 and aarch64
         run: scripts/build-burnd.sh 0.0.0-ci dist
       - uses: actions/upload-artifact@v4
