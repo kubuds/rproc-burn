@@ -44,3 +44,6 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+          # Tags with a pre-release suffix (v1.0.0-rc1) are published as
+          # pre-releases so they never show up as "latest".
+          prerelease: ${{ contains(github.ref_name, '-') }}
